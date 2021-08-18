@@ -18,11 +18,40 @@ namespace AlarmEnhancements
             GameEvents.onManeuverRemoved.Add(UpdateManeuvers);
         }
 
+        private void RemoveSOIAlarm(Vessel v)
+        {
+            var alarms = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarms.Count; i++)
+            {
+                AlarmTypeSOI al = alarms.ElementAt(i) as AlarmTypeSOI;
+                if (al == null) continue;
+                if (al.vesselId != v.persistentId) continue;
+                AlarmClockScenario.DeleteAlarm(al);
+            }
+        }
+        
+        private void RemoveManeuverAlarms(Vessel v)
+        {
+            var alarms = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarms.Count; i++)
+            {
+                AlarmTypeManeuver al = alarms.ElementAt(i) as AlarmTypeManeuver;
+                if (al == null) continue;
+                if (al.vesselId != v.persistentId) continue;
+                AlarmClockScenario.DeleteAlarm(al);
+            }
+        }
+
         private void UpdateManeuvers(Vessel v, PatchedConicSolver solver)
         {
             if (FlightGlobals.ActiveVessel == null) return;
             if (v != FlightGlobals.ActiveVessel) return;
-            if (solver == null || solver.maneuverNodes == null || solver.maneuverNodes.Count == 0) return;
+            if (solver == null || solver.maneuverNodes == null) return;
+            if (solver.maneuverNodes.Count == 0)
+            {
+                RemoveManeuverAlarms(FlightGlobals.ActiveVessel);
+                return;
+            }
             if (!ShouldSetManeuverAlarm(solver.maneuverNodes[0], v.persistentId)) return;
             AlarmTypeManeuver alarmToSet = new AlarmTypeManeuver
             {
@@ -109,7 +138,11 @@ namespace AlarmEnhancements
             if (FlightGlobals.ActiveVessel.orbit == null) return;
             if (FlightGlobals.ActiveVessel.altitude < FlightGlobals.ActiveVessel.mainBody.atmosphereDepth) return;
             if (FlightGlobals.ActiveVessel.situation == Vessel.Situations.ESCAPING) return;
-            if (FlightGlobals.ActiveVessel.orbit.PeA > FlightGlobals.ActiveVessel.mainBody.atmosphereDepth) return;
+            if (FlightGlobals.ActiveVessel.orbit.PeA > FlightGlobals.ActiveVessel.mainBody.atmosphereDepth)
+            {
+                ClearAtmoAlarms();
+                return;
+            }
             double latestTime = FlightGlobals.ActiveVessel.orbit.timeToPe + Planetarium.GetUniversalTime();
             double alarmTime = Planetarium.GetUniversalTime();
             for (alarmTime = Planetarium.GetUniversalTime(); alarmTime < latestTime; alarmTime++)
@@ -134,6 +167,19 @@ namespace AlarmEnhancements
             AlarmClockScenario.AddAlarm(alarmToSet);
         }
 
+        private void ClearAtmoAlarms()
+        {
+            var alarms = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarms.Count; i++)
+            {
+                AlarmTypeRaw al = alarms.ElementAt(i) as AlarmTypeRaw;
+                if (al == null) continue;
+                if (al.vesselId != FlightGlobals.ActiveVessel.persistentId) continue;
+                if (al.description != "Entering atmosphere of" + FlightGlobals.ActiveVessel.mainBody.bodyName) continue;
+                AlarmClockScenario.DeleteAlarm(al);
+            }
+        }
+
         private bool RefreshAlarm(double alarmTime)
         {
             var alarms = AlarmClockScenario.Instance.alarms.Values;
@@ -153,6 +199,7 @@ namespace AlarmEnhancements
         private void CheckForSoiChanges()
         {
             if (FlightGlobals.ActiveVessel.orbit == null) return;
+            if (FlightGlobals.ActiveVessel.orbit.patchEndTransition != Orbit.PatchTransitionType.ESCAPE && FlightGlobals.ActiveVessel.orbit.patchEndTransition != Orbit.PatchTransitionType.ENCOUNTER && TimeWarp.CurrentRate == 1) RemoveSOIAlarm(FlightGlobals.ActiveVessel);
             if (ShouldSetSOIAlarm(FlightGlobals.ActiveVessel)) AddSOIAlarm(FlightGlobals.ActiveVessel.vesselName, FlightGlobals.ActiveVessel.orbit.nextPatch.UTsoi);
         }
 
