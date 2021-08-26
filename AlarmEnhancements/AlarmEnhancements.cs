@@ -45,6 +45,7 @@ namespace AlarmEnhancements
 
         private void UpdateManeuvers(Vessel v, PatchedConicSolver solver)
         {
+            if (!HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AutoManeuverAlarms) return;
             if (FlightGlobals.ActiveVessel == null) return;
             if (v != FlightGlobals.ActiveVessel) return;
             if (solver == null || solver.maneuverNodes == null) return;
