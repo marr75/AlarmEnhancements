@@ -9,6 +9,7 @@ namespace AlarmEnhancements
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class AlarmEnhancements : MonoBehaviour
     {
+        private Dictionary<uint, AlarmTypeBase>.ValueCollection alarmCache;
         private void Start()
         {
             InvokeRepeating(nameof(RunCoroutine), 2.0f, 0.5f);
@@ -20,10 +21,10 @@ namespace AlarmEnhancements
 
         private void RemoveSOIAlarm(Vessel v)
         {
-            var alarms = AlarmClockScenario.Instance.alarms.Values;
-            for (int i = 0; i < alarms.Count; i++)
+            alarmCache = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarmCache.Count; i++)
             {
-                AlarmTypeSOI al = alarms.ElementAt(i) as AlarmTypeSOI;
+                AlarmTypeSOI al = alarmCache.ElementAt(i) as AlarmTypeSOI;
                 if (al == null) continue;
                 if (al.vesselId != v.persistentId) continue;
                 AlarmClockScenario.DeleteAlarm(al);
@@ -32,10 +33,10 @@ namespace AlarmEnhancements
         
         private void RemoveManeuverAlarms(Vessel v)
         {
-            var alarms = AlarmClockScenario.Instance.alarms.Values;
-            for (int i = 0; i < alarms.Count; i++)
+            alarmCache = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarmCache.Count; i++)
             {
-                AlarmTypeManeuver al = alarms.ElementAt(i) as AlarmTypeManeuver;
+                AlarmTypeManeuver al = alarmCache.ElementAt(i) as AlarmTypeManeuver;
                 if (al == null) continue;
                 if (al.vesselId != v.persistentId) continue;
                 AlarmClockScenario.DeleteAlarm(al);
@@ -44,6 +45,7 @@ namespace AlarmEnhancements
 
         private void UpdateManeuvers(Vessel v, PatchedConicSolver solver)
         {
+            if (!HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AutoManeuverAlarms) return;
             if (FlightGlobals.ActiveVessel == null) return;
             if (v != FlightGlobals.ActiveVessel) return;
             if (solver == null || solver.maneuverNodes == null) return;
@@ -72,10 +74,10 @@ namespace AlarmEnhancements
 
         private bool ShouldSetManeuverAlarm(ManeuverNode m, uint vesselId)
         {
-            var alarms = AlarmClockScenario.Instance.alarms.Values;
-            for (int i = 0; i < alarms.Count; i++)
+            alarmCache = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarmCache.Count; i++)
             {
-                AlarmTypeManeuver al = alarms.ElementAt(i) as AlarmTypeManeuver;
+                AlarmTypeManeuver al = alarmCache.ElementAt(i) as AlarmTypeManeuver;
                 if (al == null) continue;
                 if (al.vesselId != FlightGlobals.ActiveVessel.persistentId) continue;
                 return false;
@@ -169,10 +171,10 @@ namespace AlarmEnhancements
 
         private void ClearAtmoAlarms()
         {
-            var alarms = AlarmClockScenario.Instance.alarms.Values;
-            for (int i = 0; i < alarms.Count; i++)
+            alarmCache = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarmCache.Count; i++)
             {
-                AlarmTypeRaw al = alarms.ElementAt(i) as AlarmTypeRaw;
+                AlarmTypeRaw al = alarmCache.ElementAt(i) as AlarmTypeRaw;
                 if (al == null) continue;
                 if (al.vesselId != FlightGlobals.ActiveVessel.persistentId) continue;
                 if (al.description != "Entering atmosphere of" + FlightGlobals.ActiveVessel.mainBody.bodyName) continue;
@@ -207,10 +209,10 @@ namespace AlarmEnhancements
         {
             if (v.orbit.patchEndTransition != Orbit.PatchTransitionType.ESCAPE && v.orbit.patchEndTransition != Orbit.PatchTransitionType.ENCOUNTER) return false;
             if (v.orbit.nextPatch.StartUT - Planetarium.GetUniversalTime() < HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().SoiMargin) return false;
-            var alarms = AlarmClockScenario.Instance.alarms.Values;
-            for (int i = 0; i < alarms.Count; i++)
+            alarmCache = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarmCache.Count; i++)
             {
-                AlarmTypeSOI al = alarms.ElementAt(i) as AlarmTypeSOI;
+                AlarmTypeSOI al = alarmCache.ElementAt(i) as AlarmTypeSOI;
                 if (al == null) continue;
                 if (al.vesselId != v.persistentId) continue;
                 return false;
