@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using KSPAchievements;
 using UniLinq;
 using UnityEngine;
 
@@ -10,6 +9,9 @@ namespace AlarmEnhancements
     public class AlarmEnhancements : MonoBehaviour
     {
         private Dictionary<uint, AlarmTypeBase>.ValueCollection alarmCache;
+
+#region UnityStuff
+        
         private void Start()
         {
             InvokeRepeating(nameof(RunCoroutine), 2.0f, 0.5f);
@@ -18,19 +20,23 @@ namespace AlarmEnhancements
             GameEvents.onManeuverAdded.Add(UpdateManeuvers);
             GameEvents.onManeuverRemoved.Add(UpdateManeuvers);
         }
-
-        private void RemoveSOIAlarm(Vessel v)
+        
+        private void RunCoroutine()
         {
-            alarmCache = AlarmClockScenario.Instance.alarms.Values;
-            for (int i = 0; i < alarmCache.Count; i++)
-            {
-                AlarmTypeSOI al = alarmCache.ElementAt(i) as AlarmTypeSOI;
-                if (al == null) continue;
-                if (al.vesselId != v.persistentId) continue;
-                AlarmClockScenario.DeleteAlarm(al);
-            }
+            if (FlightGlobals.ActiveVessel == null) return;
+            if (FlightGlobals.ActiveVessel.orbit == null) return;
+            if(FlightGlobals.ActiveVessel.patchedConicRenderer == null) return;
+            if(HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AutoSoiAlarms)CheckForSoiChanges();
         }
         
+        private void OnDisable()
+        {
+            GameEvents.onManeuverAdded.Remove(UpdateManeuvers);
+            GameEvents.onManeuverRemoved.Remove(UpdateManeuvers);
+            GameEvents.onAlarmAdded.Remove(OnAlarmAdded);
+        }
+#endregion
+#region Maneuvers
         private void RemoveManeuverAlarms(Vessel v)
         {
             alarmCache = AlarmClockScenario.Instance.alarms.Values;
@@ -84,7 +90,8 @@ namespace AlarmEnhancements
             }
             return true;
         }
-
+#endregion
+#region RenameAlarms
         private void OnAlarmAdded(AlarmTypeBase alarm)
         {
             if (!HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AutoRenameAlarms) return;
@@ -122,17 +129,9 @@ namespace AlarmEnhancements
 
             return "ERROR";
         }
-
-        private void RunCoroutine()
-        {
-            if (FlightGlobals.ActiveVessel == null) return;
-            if (FlightGlobals.ActiveVessel.orbit == null) return;
-            if(FlightGlobals.ActiveVessel.patchedConicRenderer == null) return;
-            if(HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AutoSoiAlarms)CheckForSoiChanges();
-        }
-
-
-        private void CheckForAtmosphericReentry()
+#endregion
+#region ReentryAlarms
+private void CheckForAtmosphericReentry()
         {
             if (!HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AutoAtmoAlarms) return;
             if (FlightGlobals.ActiveVessel == null) return;
@@ -152,7 +151,7 @@ namespace AlarmEnhancements
                 if (FlightGlobals.ActiveVessel.orbit.GetRadiusAtUT(alarmTime)-FlightGlobals.ActiveVessel.mainBody.Radius < FlightGlobals.ActiveVessel.mainBody.atmosphereDepth) break;
             }
             alarmTime -= HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AtmoMargin;
-            if (!RefreshAlarm(alarmTime)) return;
+            if (!RefreshAtmoAlarm(alarmTime)) return;
             if (alarmTime - Planetarium.GetUniversalTime() < HighLogic.CurrentGame.Parameters.CustomParams<AlarmEnhancementSettings>().AtmoMargin)  return;
             AlarmTypeRaw alarmToSet = new AlarmTypeRaw
             {
@@ -182,7 +181,7 @@ namespace AlarmEnhancements
             }
         }
 
-        private bool RefreshAlarm(double alarmTime)
+        private bool RefreshAtmoAlarm(double alarmTime)
         {
             var alarms = AlarmClockScenario.Instance.alarms.Values;
             for (int i = 0; i < alarms.Count; i++)
@@ -197,7 +196,8 @@ namespace AlarmEnhancements
             }
             return true;
         }
-
+#endregion
+#region SOIAlarms
         private void CheckForSoiChanges()
         {
             if (FlightGlobals.ActiveVessel.orbit == null) return;
@@ -219,11 +219,17 @@ namespace AlarmEnhancements
             }
             return true;
         }
-
-
-        private bool CloseEnough(double firstValue, double secondValue)
+        
+        private void RemoveSOIAlarm(Vessel v)
         {
-            return Math.Abs(firstValue - secondValue) < 1;
+            alarmCache = AlarmClockScenario.Instance.alarms.Values;
+            for (int i = 0; i < alarmCache.Count; i++)
+            {
+                AlarmTypeSOI al = alarmCache.ElementAt(i) as AlarmTypeSOI;
+                if (al == null) continue;
+                if (al.vesselId != v.persistentId) continue;
+                AlarmClockScenario.DeleteAlarm(al);
+            }
         }
 
         private void AddSOIAlarm(string alarmTitle, double alarmTime)
@@ -245,7 +251,12 @@ namespace AlarmEnhancements
 
 
         }
-
+#endregion
+#region Utilities
+private bool CloseEnough(double firstValue, double secondValue)
+{
+    return Math.Abs(firstValue - secondValue) < 1;
+}
         private AlarmActions.WarpEnum GetAlarmAction(string situation)
         {
             int selectedEnum;
@@ -276,12 +287,6 @@ namespace AlarmEnhancements
             }
             return AlarmActions.WarpEnum.DoNothing;
         }
-
-        private void OnDisable()
-        {
-            GameEvents.onManeuverAdded.Remove(UpdateManeuvers);
-            GameEvents.onManeuverRemoved.Remove(UpdateManeuvers);
-            GameEvents.onAlarmAdded.Remove(OnAlarmAdded);
-        }
+#endregion
     }
 }
