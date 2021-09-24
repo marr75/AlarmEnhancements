@@ -9,7 +9,7 @@
         <AppDesignerFolder>Properties</AppDesignerFolder>
         <RootNamespace>AlarmEnhancements</RootNamespace>
         <AssemblyName>AlarmEnhancements</AssemblyName>
-        <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+        <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
         <LangVersion>default</LangVersion>
     </PropertyGroup>
@@ -33,6 +33,9 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <ItemGroup>
+        <Reference Include="0Harmony, Version=2.0.4.0, Culture=neutral, PublicKeyToken=null">
+          <HintPath>F:\SteamLibrary\steamapps\common\Kerbal Space Program\GameData\000_Harmony\0Harmony.dll</HintPath>
+        </Reference>
         <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
           <HintPath>F:\SteamLibrary\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
         </Reference>
